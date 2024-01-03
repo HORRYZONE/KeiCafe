@@ -8,12 +8,13 @@ import javafx.stage.Stage;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Stack;
 
 public class CoffeeShopGUI extends Application {
     private Map<String, String> userDatabase = new HashMap<>();
     private Stage primaryStage;
-    private GridPane loginGridPane;
-    private GridPane signUpGridPane;
+    private Stack<Pane> pageStack;
+    private StackPane root;
 
     public static void main(String[] args) {
         launch(args);
@@ -24,29 +25,38 @@ public class CoffeeShopGUI extends Application {
         this.primaryStage = primaryStage;
         this.primaryStage.setTitle("Coffee Shop");
 
-        loginGridPane = createGridPane();
-        addLoginUIControls(loginGridPane);
+        pageStack = new Stack<>();
+        root = new StackPane();
+        root.setPadding(new Insets(20));
 
-        signUpGridPane = createGridPane();
-        addSignUpUIControls(signUpGridPane);
+        showLoginScreen();
 
-        Scene scene = new Scene(loginGridPane, 400, 250);
-        primaryStage.setScene(scene);
-
+        primaryStage.setScene(new Scene(root, 400, 300));
         primaryStage.show();
     }
 
-    private GridPane createGridPane() {
+    private void pushPage(Pane page) {
+        pageStack.push(page);
+        root.getChildren().clear();
+        root.getChildren().add(page);
+    }
+
+    private void popPage() {
+        if (!pageStack.isEmpty()) {
+            pageStack.pop();
+            if (!pageStack.isEmpty()) {
+                root.getChildren().clear();
+                root.getChildren().add(pageStack.peek());
+            }
+        }
+    }
+
+    private Pane createLoginRoot() {
         GridPane gridPane = new GridPane();
         gridPane.setAlignment(Pos.CENTER);
-        gridPane.setPadding(new Insets(20));
         gridPane.setHgap(10);
         gridPane.setVgap(10);
 
-        return gridPane;
-    }
-
-    private void addLoginUIControls(GridPane gridPane) {
         Label titleLabel = new Label("Coffee Shop - Login");
         titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
         gridPane.add(titleLabel, 0, 0, 2, 1);
@@ -69,15 +79,22 @@ public class CoffeeShopGUI extends Application {
         loginButton.setOnAction(e -> login(usernameTextField.getText(), passwordField.getText()));
 
         Label signUpLabel = new Label("Don't have an account?");
-        Button signUpLink = new Button("Sign Up");
+        Hyperlink signUpLink = new Hyperlink("Sign Up");
         HBox signUpHBox = new HBox(10, signUpLabel, signUpLink);
         signUpHBox.setAlignment(Pos.CENTER);
         gridPane.add(signUpHBox, 1, 4);
 
-        signUpLink.setOnAction(e -> primaryStage.setScene(new Scene(signUpGridPane, 400, 250)));
+        signUpLink.setOnAction(e -> showSignUpScreen());
+
+        return gridPane;
     }
 
-    private void addSignUpUIControls(GridPane gridPane) {
+    private Pane createSignUpRoot() {
+        GridPane gridPane = new GridPane();
+        gridPane.setAlignment(Pos.CENTER);
+        gridPane.setHgap(10);
+        gridPane.setVgap(10);
+
         Label titleLabel = new Label("Coffee Shop - Sign Up");
         titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
         gridPane.add(titleLabel, 0, 0, 2, 1);
@@ -100,12 +117,14 @@ public class CoffeeShopGUI extends Application {
         signUpButton.setOnAction(e -> signUp(usernameTextField.getText(), passwordField.getText()));
 
         Label loginLabel = new Label("Already have an account?");
-        Button loginLink = new Button("Login");
+        Hyperlink loginLink = new Hyperlink("Login");
         HBox loginHBox = new HBox(10, loginLabel, loginLink);
         loginHBox.setAlignment(Pos.CENTER);
         gridPane.add(loginHBox, 1, 4);
 
-        loginLink.setOnAction(e -> primaryStage.setScene(new Scene(loginGridPane, 400, 250)));
+        loginLink.setOnAction(e -> popPage());
+
+        return gridPane;
     }
 
     private void signUp(String username, String password) {
@@ -121,25 +140,29 @@ public class CoffeeShopGUI extends Application {
 
         userDatabase.put(username, password);
         showAlert("Sign Up Successful", "Sign up successful. You can now log in.");
-        primaryStage.setScene(new Scene(loginGridPane, 400, 250));
+        popPage();
     }
 
     private void login(String username, String password) {
-        if (username.isEmpty() || password.isEmpty()) {
+        if(username.isEmpty() || password.isEmpty()) {
             showAlert("Login Error", "Please enter a username and password.");
             return;
         }
 
         if (userDatabase.containsKey(username)) {
             String storedPassword = userDatabase.get(username);
-            if (storedPassword.equals(password)){
-                showAlert("Login Successful", "Welcome, " + username + "!");
-            } else {
-                showAlert("Login Error", "Invalid password. Please try again.");
+            if (storedPassword.equals(password)) {
+                showAlert("Login Successful", "Login successful. Welcome, " + username + "!");
+                // Perform any actions after successful login
+                // For example, you can open a new window or load a new scene
+                // The code below just clears the fields
+                //usernameTextField.clear();
+                //passwordField.clear();
+                return;
             }
-        } else {
-            showAlert("Login Error", "Username not found. Please sign up first.");
         }
+
+        showAlert("Login Error", "Invalid username or password.");
     }
 
     private void showAlert(String title, String message) {
@@ -148,5 +171,15 @@ public class CoffeeShopGUI extends Application {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    private void showLoginScreen() {
+        Pane loginRoot = createLoginRoot();
+        pushPage(loginRoot);
+    }
+
+    private void showSignUpScreen() {
+        Pane signUpRoot = createSignUpRoot();
+        pushPage(signUpRoot);
     }
 }
